@@ -11,6 +11,9 @@ out/
 # Docs
 docs/
 
+# Context data / external docs
+CONTEXT/
+
 # Dotenv file
 .env
 
