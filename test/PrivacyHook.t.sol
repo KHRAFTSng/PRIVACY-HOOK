@@ -58,27 +58,32 @@ contract PrivacyHookTest is Test {
         hook.settleMatched(userA, userB, cft.createInEuint128(100, 0, relayer));
         vm.stopPrank();
 
-        // Wait a bit for FHE operations to complete (mock needs time)
-        vm.roll(block.number + 1);
-        
-        // Decrypt balances to assert transfers occurred
-        token0.decryptBalance(userA);
-        token1.decryptBalance(userA);
-        token0.decryptBalance(userB);
-        token1.decryptBalance(userB);
+        // Assert encrypted balances via mock storage hashes
+        cft.assertHashValue(token0.encBalances(userA), 100);
+        cft.assertHashValue(token1.encBalances(userA), 100);
+        cft.assertHashValue(token0.encBalances(userB), 100);
+        cft.assertHashValue(token1.encBalances(userB), 100);
+    }
 
-        // Wait for decryption to complete
-        vm.roll(block.number + 1);
-        
-        uint128 a0 = token0.getDecryptBalanceResult(userA);
-        uint128 a1 = token1.getDecryptBalanceResult(userA);
-        uint128 b0 = token0.getDecryptBalanceResult(userB);
-        uint128 b1 = token1.getDecryptBalanceResult(userB);
+    function test_deposit_only() public {
+        vm.prank(userA);
+        hook.depositToken0(200);
 
-        assertEq(a0, 100, "userA token0 after trade");
-        assertEq(a1, 100, "userA token1 after trade");
-        assertEq(b0, 100, "userB token0 after trade");
-        assertEq(b1, 100, "userB token1 after trade");
+        // Check encrypted balance was created using mock hash assertion
+        cft.assertHashValue(token0.encBalances(userA), 200);
+    }
+
+    function test_submit_intent() public {
+        vm.prank(userA);
+        hook.depositToken0(200);
+
+        vm.startPrank(userA);
+        InEuint128 memory amt = cft.createInEuint128(100, 0, userA);
+        InEbool memory dir = cft.createInEbool(true, 0, userA);
+        hook.submitIntent(amt, dir);
+        vm.stopPrank();
+
+        assertTrue(hook.isIntentActive(userA), "Intent should be active");
     }
 }
 

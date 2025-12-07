@@ -56,6 +56,10 @@ contract PrivacyHook is BaseHook {
     // -------------------------------------------------------------------------
     mapping(address => Intent) public intents;
 
+    function isIntentActive(address user) external view returns (bool) {
+        return intents[user].active;
+    }
+
     // -------------------------------------------------------------------------
     // Events
     // -------------------------------------------------------------------------
@@ -173,6 +177,9 @@ contract PrivacyHook is BaseHook {
         FHE.allow(amt, address(this));
         FHE.allow(amt, address(token0));
         FHE.allow(amt, address(token1));
+        FHE.allow(zero, address(this));
+        FHE.allow(zero, address(token0));
+        FHE.allow(zero, address(token1));
         FHE.allow(makerIntent.zeroForOne, address(token0));
         FHE.allow(makerIntent.zeroForOne, address(token1));
         FHE.allow(takerIntent.zeroForOne, address(token0));
