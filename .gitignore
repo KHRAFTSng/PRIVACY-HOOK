@@ -8,8 +8,9 @@ out/
 /broadcast/*/5/
 /broadcast/**/dry-run/
 
-# Docs
-docs/
+# Docs (allow docs folder, but ignore flattened contracts if too large)
+# docs/
+docs/*.flattened.sol
 
 # Context data / external docs
 CONTEXT/
