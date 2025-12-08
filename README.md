@@ -59,14 +59,19 @@ sequenceDiagram
     Relayer->>Relayer: off-chain matching (FHE)
     Relayer->>Hook: settleMatched(encAmount)
     Hook->>Hook: internal encrypted transfers (matched legs)
-    Hook->>Pool: optional net swap for residual
+    Hook->>Hook: compute residuals (intent - matched)
+    Hook->>Hook: store residuals for routing
+    Note over Hook,Pool: When swap occurs...
+    Hook->>Hook: check residuals matching swap direction
+    Hook->>Pool: route residual through AMM
     User->>Hook: withdraw (unwrap)
 ```
 
 ## Key Innovation (Triple Privacy)
-- **Encrypted balances (ERC7984)**: balances stored as `euint64` via FHE, invisible to everyone.
-- **Encrypted intents**: amounts + directions (`euint64 + euint8`) stay hidden.
+- **Encrypted balances (ERC7984)**: balances stored as `euint128` via FHE, invisible to everyone.
+- **Encrypted intents**: amounts + directions (`euint128 + ebool`) stay hidden.
 - **Off-chain matching**: relayer with FHE permissions matches privately; only settlement touches chain.
+- **Residual routing**: Unmatched intent portions automatically route through AMM while maintaining encryption.
 
 ## Result
 MEV bots cannot see what you trade, how much, or which direction—frontrunning becomes impractical with on-chain FHE-protected intents and balances. Matched trades execute with zero fees/slippage, while unmatched residuals automatically route through the AMM, maximizing capital efficiency while maintaining privacy.
@@ -77,3 +82,45 @@ MEV bots cannot see what you trade, how much, or which direction—frontrunning 
 - **Network support**: Requires Fhenix (localfhenix or Fhenix testnet) for FHE precompiles. Deployments to standard EVM testnets (e.g., Sepolia) cannot execute encrypted intents/settlements.
 - **Frontend**: CoFHE scaffold wired for deposits/intents/settlement; must point to a Fhenix-capable RPC and deployed contracts to function end-to-end.
 - **Tests**: 42 tests (unit, fuzz, invariant) cover encrypted balances, intent flows, and residual routing under CoFHE mocks. Real encrypted flow on-chain requires Fhenix.
+
+## Quick Start
+
+### Prerequisites
+- [Foundry](https://book.getfoundry.sh/getting-started/installation)
+- [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/)
+- Fhenix network access (localfhenix or Fhenix testnet)
+
+### Testing
+```bash
+# Run all tests
+forge test
+
+# Run with coverage
+forge coverage
+
+# Run specific test suite
+forge test --match-contract PrivacyHook
+```
+
+### Deployment
+See [DEPLOY.md](./DEPLOY.md) for detailed deployment instructions.
+
+For Fhenix testnet:
+```bash
+# Set environment variables in .env
+FHENIX_RPC_URL=https://api.nitrogen.fhenix.zone
+FHENIX_CHAIN_ID=42069
+FHENIX_PRIVATE_KEY=your_private_key
+FHENIX_RELAYER=relayer_address
+FHENIX_POOL_MANAGER=pool_manager_address
+
+# Deploy
+npx hardhat run scripts/deploy-privacy.ts --network fhenix
+```
+
+## Test Coverage
+- **Unit Tests**: 19 tests for `HybridFHERC20`, 9 tests for `PrivacyHook`
+- **Fuzz Tests**: 3 fuzz tests covering edge cases in token operations
+- **Invariant Tests**: 1 invariant test ensuring supply consistency
+- **Integration Tests**: 7 tests for Uniswap v4 integration utilities
+- **Total**: 42 tests, all passing ✅
