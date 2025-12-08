@@ -1,20 +1,70 @@
-*PRIVACY HOOK*
+# Privacy Hook
 
-Privacy Hook: Encrypted Intent-Based Trading for Uniswap V4
-Brief Description
-Privacy Hook is a privacy-first Uniswap V4 hook that enables completely encrypted swaps using Fhenix's Fully Homomorphic Encryption (FHE). Users deposit tokens to receive encrypted balance tokens (ERC7984), then submit trade intents where amounts, directions, and order sizes are fully hidden on-chain. A relayer matches opposing intents off-chain and settles them in batches: matched trades execute as internal encrypted transfers with zero fees and no slippage, while only the net unmatched volume routes through the AMM. Idle liquidity automatically earns yield via integrated lending protocols (SimpleLending), shuttled just-in-time during swaps for maximum capital efficiency.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Built with Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFB600.svg)](https://book.getfoundry.sh/)
+[![Uniswap v4 Hooks](https://img.shields.io/badge/Uniswap-v4%20Hooks-ff69b4.svg)](https://docs.uniswap.org/contracts/v4/overview)
+[![Fhenix FHE](https://img.shields.io/badge/Fhenix-FHE-6E3CBC.svg)](https://docs.fhenix.zone/)
+[![Frontend: Next.js](https://img.shields.io/badge/Frontend-Next.js%20%2B%20Scaffold--ETH-black.svg)](https://github.com/FhenixProtocol/cofhe-scaffold-eth)
 
-The Problem (One Sentence)
-Public mempool transparency exposes traders to MEV extraction, frontrunning, and information leakage—especially devastating for large orders where even seeing the trade direction or size allows exploitation.
+## Description
+Privacy Hook is a privacy-first Uniswap v4 hook that enables fully encrypted swaps using Fhenix’s Fully Homomorphic Encryption (FHE). Users deposit tokens to receive encrypted balance tokens (ERC7984), submit encrypted trade intents (amount + direction), and a relayer privately matches them off-chain. Matched trades settle internally with zero fees/slippage; only the net residual volume touches the AMM. Idle liquidity can be lent out and shuttled back just-in-time for swaps.
 
-The Solution (One Sentence)
-Encrypt everything end-to-end using Fhenix FHE so that trade amounts, directions, and balances remain hidden even from the contract itself, with matched intents settling internally (no AMM fees) and only net residuals touching Uniswap pools.
+## Problem
+Public mempool transparency leaks trade direction and size, enabling MEV (frontrunning/sandwiching) and harming large orders even when only intent is visible.
 
-Key Innovation
-Triple Privacy Architecture powered by Fhenix:
+## Solution
+End-to-end encryption with Fhenix FHE:
+- Amounts, directions, and balances stay encrypted—even to the contract.
+- Off-chain relayer (with FHE permissions) matches intents privately; only settlement deltas touch chain.
+- Netting reduces AMM exposure; matched legs execute as internal encrypted transfers.
 
-Encrypted Balances (ERC7984): Token balances encrypted as euint64 using Fhenix FHE, invisible to everyone
-Encrypted Intents: Trade amounts AND directions encrypted (euint64 + euint8), zero information leakage
-Off-Chain Matching: Relayer with FHE permissions matches opposite trades privately using Fhenix's confidential compute, only settlement data touches chain
+## Architecture (high level)
+- **Users**: Deposit ERC20 → receive encrypted balances; submit encrypted intents (amount + direction).
+- **Relayer/Matcher**: Off-chain, FHE-permitted; batches compatible intents and submits encrypted settlement.
+- **Privacy Hook (Uniswap v4)**: Handles intent registry, encrypted accounting, and calls PoolManager when residual flow is needed.
+- **HybridFHERC20 tokens**: Encrypted balance ledger; wrap/unwrap between public ERC20 and encrypted supply.
+- **Optional yield path**: Idle liquidity can be sent to an external lender and returned JIT for swaps.
 
-Result: MEV bots can't see what you're trading, how much you're trading, or which direction—making frontrunning mathematically impossible thanks to Fhenix's onchain FHE.
+### Flow (textual)
+1) **Deposit**: User wraps ERC20 → encrypted balance (HybridFHERC20).  
+2) **Intent**: User submits encrypted amount + direction to the hook.  
+3) **Match**: Relayer privately matches opposing intents off-chain.  
+4) **Settle**: Relayer calls `settleMatched`; matched legs move as encrypted transfers, residual hits AMM.  
+5) **Withdraw**: User unwraps encrypted balance back to ERC20 when desired.  
+
+### Diagrams (mermaid)
+```mermaid
+flowchart TD
+    U(User) -->|Deposit| H(Privacy Hook)
+    H -->|Wrap| T0[HybridFHERC20 token0]
+    H -->|Wrap| T1[HybridFHERC20 token1]
+    U -->|Submit encrypted intent| H
+    R(Relayer) -->|Match off-chain| R
+    R -->|Settle matched| H
+    H -->|Encrypted transfers| T0
+    H -->|Encrypted transfers| T1
+    H -->|Net residual swap| PM(PoolManager/AMM)
+```
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Hook
+    participant Relayer
+    participant Pool
+    User->>Hook: deposit (wrap to encrypted balance)
+    User->>Hook: submitIntent(encAmount, encDirection)
+    Relayer->>Relayer: off-chain matching (FHE)
+    Relayer->>Hook: settleMatched(encAmount)
+    Hook->>Hook: internal encrypted transfers (matched legs)
+    Hook->>Pool: optional net swap for residual
+    User->>Hook: withdraw (unwrap)
+```
+
+## Key Innovation (Triple Privacy)
+- **Encrypted balances (ERC7984)**: balances stored as `euint64` via FHE, invisible to everyone.
+- **Encrypted intents**: amounts + directions (`euint64 + euint8`) stay hidden.
+- **Off-chain matching**: relayer with FHE permissions matches privately; only settlement touches chain.
+
+## Result
+MEV bots cannot see what you trade, how much, or which direction—frontrunning becomes impractical with on-chain FHE-protected intents and balances.
