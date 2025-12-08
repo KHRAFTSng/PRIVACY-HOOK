@@ -8,5 +8,6 @@ solc_version = "0.8.26"
 evm_version = "cancun"
 auto_detect_remappings = false
 
+# coverage ignore is passed via CLI flags; remove here to avoid warnings
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

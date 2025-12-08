@@ -26,11 +26,19 @@ const config: HardhatUserConfig = {
         "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
       ],
     },
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL || "",
+      chainId: 11155111,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
     fhenix: {
       url: process.env.FHENIX_RPC_URL || "",
       chainId: process.env.FHENIX_CHAIN_ID ? Number(process.env.FHENIX_CHAIN_ID) : undefined,
       accounts: process.env.FHENIX_PRIVATE_KEY ? [process.env.FHENIX_PRIVATE_KEY] : [],
     },
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
   },
 };
 

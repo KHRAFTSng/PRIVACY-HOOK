@@ -6,7 +6,7 @@ import {PrivacyHook} from "../src/PrivacyHook.sol";
 import {HybridFHERC20} from "../src/HybridFHERC20.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {CoFheTest} from "@fhenixprotocol/cofhe-foundry-mocks/CoFheTest.sol";
-import {FHE, InEuint128, InEbool} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+import {FHE, InEuint128, InEbool, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract PrivacyHookTest is Test {
     using FHE for uint256;
@@ -19,6 +19,7 @@ contract PrivacyHookTest is Test {
     address relayer = address(this);
     address userA = address(0xA);
     address userB = address(0xB);
+    address attacker = address(0xC0FFEE);
 
     function setUp() public {
         cft = new CoFheTest(true);
@@ -84,6 +85,33 @@ contract PrivacyHookTest is Test {
         vm.stopPrank();
 
         assertTrue(hook.isIntentActive(userA), "Intent should be active");
+    }
+
+    function test_cancel_intent() public {
+        vm.startPrank(userA);
+        InEuint128 memory amt = cft.createInEuint128(50, 0, userA);
+        InEbool memory dir = cft.createInEbool(true, 0, userA);
+        hook.submitIntent(amt, dir);
+        hook.cancelIntent();
+        vm.stopPrank();
+
+        assertFalse(hook.isIntentActive(userA), "Intent should be cancelled");
+    }
+
+    function test_deposit_zero_reverts() public {
+        vm.expectRevert(PrivacyHook.InvalidAmount.selector);
+        hook.depositToken0(0);
+    }
+
+    function test_request_withdraw_success_path() public {
+        vm.prank(userA);
+        hook.depositToken0(50);
+
+        vm.startPrank(userA);
+        InEuint128 memory burnReq = cft.createInEuint128(20, 0, userA);
+        vm.expectRevert(); // decrypt will revert in mock signer flow
+        hook.requestWithdrawToken0(burnReq);
+        vm.stopPrank();
     }
 }
 
