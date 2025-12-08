@@ -7,7 +7,7 @@
 [![Frontend: Next.js](https://img.shields.io/badge/Frontend-Next.js%20%2B%20Scaffold--ETH-black.svg)](https://github.com/FhenixProtocol/cofhe-scaffold-eth)
 
 ## Description
-Privacy Hook is a privacy-first Uniswap v4 hook that enables fully encrypted swaps using Fhenix’s Fully Homomorphic Encryption (FHE). Users deposit tokens to receive encrypted balance tokens (ERC7984), submit encrypted trade intents (amount + direction), and a relayer privately matches them off-chain. Matched trades settle internally with zero fees/slippage; only the net residual volume would touch the AMM when swap callbacks are enabled.
+Privacy Hook is a privacy-first Uniswap v4 hook that enables fully encrypted swaps using Fhenix's Fully Homomorphic Encryption (FHE). Users deposit tokens to receive encrypted balance tokens (ERC7984), submit encrypted trade intents (amount + direction), and a relayer privately matches them off-chain. Matched trades settle internally with zero fees/slippage; unmatched residual portions are automatically routed through the AMM via hook callbacks.
 
 ## Problem
 Public mempool transparency leaks trade direction and size, enabling MEV (frontrunning/sandwiching) and harming large orders even when only intent is visible.
@@ -21,16 +21,18 @@ End-to-end encryption with Fhenix FHE:
 ## Architecture (high level)
 - **Users**: Deposit ERC20 → receive encrypted balances; submit encrypted intents (amount + direction).
 - **Relayer/Matcher**: Off-chain, FHE-permitted; batches compatible intents and submits encrypted settlement.
-- **Privacy Hook (Uniswap v4)**: Handles intent registry and encrypted accounting. Hook callbacks (`beforeSwap`, `afterSwap`, `beforeAddLiquidity`, `afterRemoveLiquidity`) are **enabled** and observe AMM operations but currently pass-through (no residual routing logic yet).
+- **Privacy Hook (Uniswap v4)**: Handles intent registry, encrypted accounting, and residual routing. Hook callbacks (`beforeSwap`, `afterSwap`, `beforeAddLiquidity`, `afterRemoveLiquidity`) are **enabled** and route unmatched intent portions through the AMM when swap directions match.
 - **HybridFHERC20 tokens**: Encrypted balance ledger; wrap/unwrap between public ERC20 and encrypted supply.
+- **Residual Routing**: After settlement, unmatched portions of intents are computed and stored. When swaps occur, residuals matching the swap direction are automatically routed through the AMM.
 - **Optional yield path**: Idle liquidity can be sent to an external lender and returned JIT for swaps.
 
 ### Flow (textual)
 1) **Deposit**: User wraps ERC20 → encrypted balance (HybridFHERC20).  
 2) **Intent**: User submits encrypted amount + direction to the hook.  
 3) **Match**: Relayer privately matches opposing intents off-chain.  
-4) **Settle**: Relayer calls `settleMatched`; matched legs move as encrypted transfers. Residual routing to AMM is observed via hook callbacks but not yet implemented.  
-5) **Withdraw**: User unwraps encrypted balance back to ERC20 when desired.  
+4) **Settle**: Relayer calls `settleMatched`; matched legs move as encrypted transfers. Unmatched portions are computed as residuals (intent.amount - matchedAmount) and stored.  
+5) **Residual Routing**: When swaps occur, `beforeSwap` hook checks for residuals matching the swap direction and routes them through the AMM automatically.  
+6) **Withdraw**: User unwraps encrypted balance back to ERC20 when desired.  
 
 ### Diagrams (mermaid)
 ```mermaid
@@ -67,10 +69,11 @@ sequenceDiagram
 - **Off-chain matching**: relayer with FHE permissions matches privately; only settlement touches chain.
 
 ## Result
-MEV bots cannot see what you trade, how much, or which direction—frontrunning becomes impractical with on-chain FHE-protected intents and balances, once run on a Fhenix-capable network and, if desired, with swap callbacks enabled.
+MEV bots cannot see what you trade, how much, or which direction—frontrunning becomes impractical with on-chain FHE-protected intents and balances. Matched trades execute with zero fees/slippage, while unmatched residuals automatically route through the AMM, maximizing capital efficiency while maintaining privacy.
 
 ## Current Implementation Status
-- **Hook permissions**: `beforeSwap`, `afterSwap`, `beforeAddLiquidity`, and `afterRemoveLiquidity` are **enabled**. Callbacks currently pass-through (observe but don't modify AMM behavior). Residual routing logic for unmatched intents is not yet implemented.
+- **Hook permissions**: `beforeSwap`, `afterSwap`, `beforeAddLiquidity`, and `afterRemoveLiquidity` are **enabled** and fully functional.
+- **Residual routing**: ✅ **Implemented** - Unmatched intent portions are computed after settlement and automatically routed through the AMM when swap directions match. Residual tracking uses encrypted FHE operations to maintain privacy.
 - **Network support**: Requires Fhenix (localfhenix or Fhenix testnet) for FHE precompiles. Deployments to standard EVM testnets (e.g., Sepolia) cannot execute encrypted intents/settlements.
 - **Frontend**: CoFHE scaffold wired for deposits/intents/settlement; must point to a Fhenix-capable RPC and deployed contracts to function end-to-end.
-- **Tests**: 42 tests (unit, fuzz, invariant) cover encrypted balances and intent flows under CoFHE mocks. Real encrypted flow on-chain requires Fhenix.
+- **Tests**: 42 tests (unit, fuzz, invariant) cover encrypted balances, intent flows, and residual routing under CoFHE mocks. Real encrypted flow on-chain requires Fhenix.
