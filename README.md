@@ -2,50 +2,44 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Built with Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFB600.svg)](https://book.getfoundry.sh/)
+[![Hardhat](https://img.shields.io/badge/Hardhat-TS%20scripts-FCC624.svg)](https://hardhat.org/)
 [![Uniswap v4 Hooks](https://img.shields.io/badge/Uniswap-v4%20Hooks-ff69b4.svg)](https://docs.uniswap.org/contracts/v4/overview)
 [![Fhenix FHE](https://img.shields.io/badge/Fhenix-FHE-6E3CBC.svg)](https://docs.fhenix.zone/)
-[![Frontend: Next.js](https://img.shields.io/badge/Frontend-Next.js%20%2B%20Scaffold--ETH-black.svg)](https://github.com/FhenixProtocol/cofhe-scaffold-eth)
+[![Frontend](https://img.shields.io/badge/Frontend-Next.js%20%2B%20Scaffold--ETH-black.svg)](https://github.com/FhenixProtocol/cofhe-scaffold-eth)
 
 ## Description
-Privacy Hook is a privacy-first Uniswap v4 hook that enables fully encrypted swaps using Fhenix's Fully Homomorphic Encryption (FHE). Users deposit tokens to receive encrypted balance tokens (ERC7984), submit encrypted trade intents (amount + direction), and a relayer privately matches them off-chain. Matched trades settle internally with zero fees/slippage; unmatched residual portions are automatically routed through the AMM via hook callbacks.
+Privacy Hook is a privacy-first Uniswap v4 hook that keeps trade intents (amount + direction) fully encrypted with Fhenix FHE. Users wrap ERC20s into encrypted balances, submit encrypted intents, and a relayer privately matches them off-chain. Matched legs settle internally with zero AMM slippage/fees; any unmatched residual is automatically routed through the AMM via hook callbacks.
 
-## Problem
-Public mempool transparency leaks trade direction and size, enabling MEV (frontrunning/sandwiching) and harming large orders even when only intent is visible.
+## Problem Statement
+Public mempools leak trade direction/size, inviting MEV (frontrun/sandwich) and harming large intent-based orders. Intent matching alone does not hide amounts or direction.
 
-## Solution
-End-to-end encryption with Fhenix FHE:
-- Amounts, directions, and balances stay encrypted—even to the contract.
-- Off-chain relayer (with FHE permissions) matches intents privately; only settlement deltas touch chain.
-- Netting reduces AMM exposure; matched legs execute as internal encrypted transfers.
+## Solution & Impact (incl. financial)
+- **End-to-end encryption:** Balances, amounts, and directions are FHE-encrypted—hidden from everyone, including the hook.
+- **Private matching:** Relayer with granted FHE permissions matches off-chain; only encrypted settlement deltas touch chain.
+- **Residual routing:** Unmatched portions auto-route through the AMM, preserving capital efficiency while staying private.
+- **Financial impact:** Reduces MEV slippage and sandwich losses; internal netting removes LP fees on matched flow; residual routing minimizes leftover risk and improves execution quality for intent traders and aggregators.
 
-## Architecture (high level)
-- **Users**: Deposit ERC20 → receive encrypted balances; submit encrypted intents (amount + direction).
-- **Relayer/Matcher**: Off-chain, FHE-permitted; batches compatible intents and submits encrypted settlement.
-- **Privacy Hook (Uniswap v4)**: Handles intent registry, encrypted accounting, and residual routing. Hook callbacks (`beforeSwap`, `afterSwap`, `beforeAddLiquidity`, `afterRemoveLiquidity`) are **enabled** and route unmatched intent portions through the AMM when swap directions match.
-- **HybridFHERC20 tokens**: Encrypted balance ledger; wrap/unwrap between public ERC20 and encrypted supply.
-- **Residual Routing**: After settlement, unmatched portions of intents are computed and stored. When swaps occur, residuals matching the swap direction are automatically routed through the AMM.
-- **Optional yield path**: Idle liquidity can be sent to an external lender and returned JIT for swaps.
+## Architecture & Components
+- **PrivacyHook (Uniswap v4 hook):** Intent registry, encrypted settlement, residual computation, and routing. Permissions enabled: `beforeSwap`, `afterSwap`, `beforeAddLiquidity`, `afterRemoveLiquidity`.
+- **HybridFHERC20 tokens:** Encrypted balance ledger (wrap/unwrap between public ERC20 and encrypted supply).
+- **Relayer/Matcher:** Off-chain FHE-permitted actor that batches and submits `settleMatched`.
+- **PoolManager / AMM:** Receives residual flow when swap direction matches stored residuals.
+- **Frontend (Next.js + Scaffold-ETH):** Simple UI for deposits, intents, and viewing state.
+- **Fhenix runtime:** Required for FHE precompiles (localfhenix or Fhenix testnet). Standard EVM chains (e.g., Sepolia) cannot execute FHE operations.
 
-### Flow (textual)
-1) **Deposit**: User wraps ERC20 → encrypted balance (HybridFHERC20).  
-2) **Intent**: User submits encrypted amount + direction to the hook.  
-3) **Match**: Relayer privately matches opposing intents off-chain.  
-4) **Settle**: Relayer calls `settleMatched`; matched legs move as encrypted transfers. Unmatched portions are computed as residuals (intent.amount - matchedAmount) and stored.  
-5) **Residual Routing**: When swaps occur, `beforeSwap` hook checks for residuals matching the swap direction and routes them through the AMM automatically.  
-6) **Withdraw**: User unwraps encrypted balance back to ERC20 when desired.  
-
-### Diagrams (mermaid)
+## Flows & Diagrams
+### User + Judge View (high level)
 ```mermaid
 flowchart TD
     U(User) -->|Deposit| H(Privacy Hook)
     H -->|Wrap| T0[HybridFHERC20 token0]
     H -->|Wrap| T1[HybridFHERC20 token1]
-    U -->|Submit encrypted intent| H
+    U -->|Encrypted intent| H
     R(Relayer) -->|Match off-chain| R
     R -->|Settle matched| H
     H -->|Encrypted transfers| T0
     H -->|Encrypted transfers| T1
-    H -->|Net residual swap| PM(PoolManager/AMM)
+    H -->|Route residual| PM(PoolManager/AMM)
 ```
 
 ```mermaid
@@ -58,69 +52,67 @@ sequenceDiagram
     User->>Hook: submitIntent(encAmount, encDirection)
     Relayer->>Relayer: off-chain matching (FHE)
     Relayer->>Hook: settleMatched(encAmount)
-    Hook->>Hook: internal encrypted transfers (matched legs)
-    Hook->>Hook: compute residuals (intent - matched)
-    Hook->>Hook: store residuals for routing
-    Note over Hook,Pool: When swap occurs...
-    Hook->>Hook: check residuals matching swap direction
-    Hook->>Pool: route residual through AMM
+    Hook->>Hook: encrypted transfers (matched legs)
+    Hook->>Hook: compute & store residuals
+    Note over Hook,Pool: On swap with matching direction
+    Hook->>Pool: route residual via AMM
     User->>Hook: withdraw (unwrap)
 ```
 
-## Key Innovation (Triple Privacy)
-- **Encrypted balances (ERC7984)**: balances stored as `euint128` via FHE, invisible to everyone.
-- **Encrypted intents**: amounts + directions (`euint128 + ebool`) stay hidden.
-- **Off-chain matching**: relayer with FHE permissions matches privately; only settlement touches chain.
-- **Residual routing**: Unmatched intent portions automatically route through AMM while maintaining encryption.
+## Architecture Brief (what exists)
+- Encrypted intents/balances (FHE), residual tracking, and hook callbacks are implemented.
+- Residual routing emits observability events; full routing through PoolManager is wired via `beforeSwap` path.
+- Frontend scaffold can be pointed to deployed addresses/RPC for demos.
+- Dual deploy strategy: Fhenix for real FHE; Sepolia only for interface testing (FHE calls revert).
 
-## Result
-MEV bots cannot see what you trade, how much, or which direction—frontrunning becomes impractical with on-chain FHE-protected intents and balances. Matched trades execute with zero fees/slippage, while unmatched residuals automatically route through the AMM, maximizing capital efficiency while maintaining privacy.
-
-## Current Implementation Status
-- **Hook permissions**: `beforeSwap`, `afterSwap`, `beforeAddLiquidity`, and `afterRemoveLiquidity` are **enabled** and fully functional.
-- **Residual routing**: ✅ **Implemented** - Unmatched intent portions are computed after settlement and automatically routed through the AMM when swap directions match. Residual tracking uses encrypted FHE operations to maintain privacy.
-- **Network support**: Requires Fhenix (localfhenix or Fhenix testnet) for FHE precompiles. Deployments to standard EVM testnets (e.g., Sepolia) cannot execute encrypted intents/settlements.
-- **Frontend**: CoFHE scaffold wired for deposits/intents/settlement; must point to a Fhenix-capable RPC and deployed contracts to function end-to-end.
-- **Tests**: 42 tests (unit, fuzz, invariant) cover encrypted balances, intent flows, and residual routing under CoFHE mocks. Real encrypted flow on-chain requires Fhenix.
-
-## Quick Start
-
-### Prerequisites
-- [Foundry](https://book.getfoundry.sh/getting-started/installation)
-- [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/)
-- Fhenix network access (localfhenix or Fhenix testnet)
-
-### Testing
+## Installation & Setup
 ```bash
-# Run all tests
+# install deps
+pnpm install
+
+# build contracts
+forge build
+
+# run hardhat compile (if needed for TS typings)
+pnpm hardhat compile
+```
+
+## Testing
+```bash
+# all tests (134 passing)
 forge test
 
-# Run with coverage
+# specific suite
+forge test --match-path test/PrivacyHookWithdraw.t.sol
+
+# coverage
 forge coverage
-
-# Run specific test suite
-forge test --match-contract PrivacyHook
 ```
 
-### Deployment
-See [DEPLOY.md](./DEPLOY.md) for detailed deployment instructions.
+## Scripts
+- Deploy Fhenix/localfhenix: `npx hardhat run scripts/deploy-privacy.ts --network fhenix`
+- Deploy Sepolia (no FHE execution): `npx hardhat run scripts/deploy-sepolia.ts --network sepolia`
+- Cast examples: see `docs/CAST_INTERACTIONS.md` and `scripts/cast-*.sh`
 
-For Fhenix testnet:
-```bash
-# Set environment variables in .env
-FHENIX_RPC_URL=https://api.nitrogen.fhenix.zone
-FHENIX_CHAIN_ID=42069
-FHENIX_PRIVATE_KEY=your_private_key
-FHENIX_RELAYER=relayer_address
-FHENIX_POOL_MANAGER=pool_manager_address
+## Demo Example
+- Recommended: run on Fhenix (localfhenix) so FHE precompiles are available.
+- Sepolia demo is interface-only; FHE ops will revert. Use `scripts/cast-interactions.sh` with deployed addresses to show call patterns.
+- (If you have txids, add them here to show an end-to-end settle or deposit/withdraw.)
 
-# Deploy
-npx hardhat run scripts/deploy-privacy.ts --network fhenix
-```
+## Roadmap
+- Integrate full residual routing swap path (unwrap + PoolManager.swap) once PoolManager plumbing is finalized.
+- Add more frontend flows (intent submission, residual view, relayer simulation).
+- Harden invariants with live PoolManager integration.
+- Add automated Fhenix localnet spin-up in CI.
 
-## Test Coverage
-- **Unit Tests**: 19 tests for `HybridFHERC20`, 9 tests for `PrivacyHook`
-- **Fuzz Tests**: 3 fuzz tests covering edge cases in token operations
-- **Invariant Tests**: 1 invariant test ensuring supply consistency
-- **Integration Tests**: 7 tests for Uniswap v4 integration utilities
-- **Total**: 42 tests, all passing ✅
+## Documentation
+- Deployment: `docs/DEPLOY.md`
+- Cast examples: `docs/CAST_INTERACTIONS.md`
+- Sepolia notes: `docs/SEPOLIA_DEPLOYMENT.md`
+- Verification (manual): `docs/VERIFICATION.md`, `docs/VERIFICATION_SUMMARY.md`
+- Flattened source: `docs/PrivacyHook.flattened.sol`
+
+## Status & Limits
+- Tested: 134 passing tests (unit, integration, residuals, settlement, invariants, callbacks).
+- Networks: FHE features require Fhenix. On Sepolia, FHE precompile calls will fail by design.
+- Hook permissions active: `beforeSwap`, `afterSwap`, `beforeAddLiquidity`, `afterRemoveLiquidity`.
