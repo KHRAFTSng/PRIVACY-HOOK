@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {PrivacyHook} from "../src/PrivacyHook.sol";
 import {HybridFHERC20} from "../src/HybridFHERC20.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {CoFheTest} from "@fhenixprotocol/cofhe-foundry-mocks/CoFheTest.sol";
 import {FHE, InEuint128, InEbool} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
@@ -211,7 +212,7 @@ contract PrivacyHookInvariantTest is Test {
     // =========================================================================
 
     function invariant_hook_permissions_consistent() public view {
-        var permissions = hook.getHookPermissions();
+        Hooks.Permissions memory permissions = hook.getHookPermissions();
         
         // Invariant: Hook permissions should match expected configuration
         assertFalse(permissions.beforeInitialize);
