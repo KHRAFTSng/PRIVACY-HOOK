@@ -36,7 +36,7 @@ contract PrivacyHookInvariantTest is Test {
     // Invariant: Intent State Consistency
     // =========================================================================
 
-    function invariant_intent_active_flag_consistency() public view {
+    function test_invariant_intent_active_flag_consistency() public view {
         // If an intent is active, it should have been submitted
         // This is implicitly true because active is set on submitIntent
         // and cleared on cancelIntent or settleMatched
@@ -48,7 +48,7 @@ contract PrivacyHookInvariantTest is Test {
         assertTrue(activeB == true || activeB == false);
     }
 
-    function invariant_settled_intents_are_inactive() public {
+    function test_invariant_settled_intents_are_inactive() public {
         // Setup
         token0.mint(userA, 200);
         token1.mint(userB, 200);
@@ -81,7 +81,7 @@ contract PrivacyHookInvariantTest is Test {
         assertFalse(hook.isIntentActive(userB));
     }
 
-    function invariant_cancelled_intents_are_inactive() public {
+    function test_invariant_cancelled_intents_are_inactive() public {
         InEuint128 memory amt = cft.createInEuint128(100, 0, userA);
         InEbool memory dir = cft.createInEbool(true, 0, userA);
 
@@ -99,13 +99,13 @@ contract PrivacyHookInvariantTest is Test {
     // Invariant: Immutable Configuration
     // =========================================================================
 
-    function invariant_relayer_address_immutable() public view {
+    function test_invariant_relayer_address_immutable() public view {
         // Invariant: Relayer address should never change
         address currentRelayer = hook.relayer();
         assertEq(currentRelayer, relayer);
     }
 
-    function invariant_token_addresses_immutable() public view {
+    function test_invariant_token_addresses_immutable() public view {
         // Invariant: Token addresses should never change
         assertEq(address(hook.token0()), address(token0));
         assertEq(address(hook.token1()), address(token1));
@@ -115,7 +115,7 @@ contract PrivacyHookInvariantTest is Test {
     // Invariant: Residual State Consistency
     // =========================================================================
 
-    function invariant_residual_exists_after_partial_settlement() public {
+    function test_invariant_residual_exists_after_partial_settlement() public {
         token0.mint(userA, 300);
         token1.mint(userB, 300);
 
@@ -153,7 +153,7 @@ contract PrivacyHookInvariantTest is Test {
     // Invariant: Balance Consistency
     // =========================================================================
 
-    function invariant_deposit_increases_encrypted_balance() public {
+    function test_invariant_deposit_increases_encrypted_balance() public {
         token0.mint(userA, 500);
         
         uint256 balanceBefore = 0; // Encrypted balance starts at 0
@@ -166,7 +166,7 @@ contract PrivacyHookInvariantTest is Test {
         cft.assertHashValue(token0.encBalances(userA), 200);
     }
 
-    function invariant_settlement_preserves_total_balances() public {
+    function test_invariant_settlement_preserves_total_balances() public {
         token0.mint(userA, 200);
         token1.mint(userB, 200);
 
@@ -211,7 +211,7 @@ contract PrivacyHookInvariantTest is Test {
     // Invariant: Hook Permissions Consistency
     // =========================================================================
 
-    function invariant_hook_permissions_consistent() public view {
+    function test_invariant_hook_permissions_consistent() public view {
         Hooks.Permissions memory permissions = hook.getHookPermissions();
         
         // Invariant: Hook permissions should match expected configuration
@@ -231,7 +231,7 @@ contract PrivacyHookInvariantTest is Test {
     // Invariant: Authorization Consistency
     // =========================================================================
 
-    function invariant_only_relayer_can_settle() public {
+    function test_invariant_only_relayer_can_settle() public {
         token0.mint(userA, 200);
         token1.mint(userB, 200);
 
@@ -267,7 +267,7 @@ contract PrivacyHookInvariantTest is Test {
     // Invariant: State Transitions
     // =========================================================================
 
-    function invariant_intent_lifecycle_transitions() public {
+    function test_invariant_intent_lifecycle_transitions() public {
         // Invariant: Intent can transition: inactive -> active -> inactive
         // Start: inactive
         assertFalse(hook.isIntentActive(userA));
@@ -291,7 +291,7 @@ contract PrivacyHookInvariantTest is Test {
         assertTrue(hook.isIntentActive(userA));
     }
 
-    function invariant_no_double_settlement() public {
+    function test_invariant_no_double_settlement() public {
         token0.mint(userA, 200);
         token1.mint(userB, 200);
 
