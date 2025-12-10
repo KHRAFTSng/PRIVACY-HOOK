@@ -43,13 +43,14 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount = cft.createInEuint128(100, 0, userA);
         
         vm.expectEmit(true, false, false, false);
-        emit PrivacyHook.WithdrawRequested(userA, 0, euint128(0)); // burnHandle is encrypted
+        emit PrivacyHook.WithdrawRequested(userA, 0, FHE.asEuint128(0)); // burnHandle is encrypted
 
         vm.prank(userA);
         euint128 burnHandle = hook.requestWithdrawToken0(encAmount);
 
         // Verify burn handle was returned (encrypted value)
-        assertTrue(uint256(burnHandle) != 0);
+        // Can't directly compare encrypted values, but we can check it's not zero by checking the hash
+        cft.assertHashValue(burnHandle, 100); // The burn handle should correspond to the amount
     }
 
     function test_requestWithdrawToken0_multiple_requests() public {
@@ -65,8 +66,9 @@ contract PrivacyHookWithdrawTest is Test {
         vm.prank(userA);
         euint128 burnHandle2 = hook.requestWithdrawToken0(encAmount2);
 
-        // Both handles should be different
-        assertTrue(uint256(burnHandle1) != uint256(burnHandle2));
+        // Both handles should be different (verify via hash values)
+        cft.assertHashValue(burnHandle1, 100);
+        cft.assertHashValue(burnHandle2, 50);
     }
 
     function test_requestWithdrawToken0_wrong_sender_reverts() public {
@@ -88,7 +90,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount = cft.createInEuint128(100, 0, userA);
         
         vm.expectEmit(true, false, false, false);
-        emit PrivacyHook.WithdrawRequested(userA, 0, euint128(0));
+        emit PrivacyHook.WithdrawRequested(userA, 0, FHE.asEuint128(0));
 
         vm.prank(userA);
         hook.requestWithdrawToken0(encAmount);
@@ -106,12 +108,13 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount = cft.createInEuint128(100, 0, userA);
         
         vm.expectEmit(true, false, false, false);
-        emit PrivacyHook.WithdrawRequested(userA, 1, euint128(0));
+        emit PrivacyHook.WithdrawRequested(userA, 1, FHE.asEuint128(0));
 
         vm.prank(userA);
         euint128 burnHandle = hook.requestWithdrawToken1(encAmount);
 
-        assertTrue(uint256(burnHandle) != 0);
+        // Verify burn handle was returned (check via hash)
+        cft.assertHashValue(burnHandle, 100);
     }
 
     function test_requestWithdrawToken1_multiple_requests() public {
@@ -127,7 +130,9 @@ contract PrivacyHookWithdrawTest is Test {
         vm.prank(userA);
         euint128 burnHandle2 = hook.requestWithdrawToken1(encAmount2);
 
-        assertTrue(uint256(burnHandle1) != uint256(burnHandle2));
+        // Verify handles are different via hash values
+        cft.assertHashValue(burnHandle1, 100);
+        cft.assertHashValue(burnHandle2, 50);
     }
 
     function test_requestWithdrawToken1_wrong_sender_reverts() public {
@@ -149,7 +154,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount = cft.createInEuint128(100, 0, userA);
         
         vm.expectEmit(true, false, false, false);
-        emit PrivacyHook.WithdrawRequested(userA, 1, euint128(0));
+        emit PrivacyHook.WithdrawRequested(userA, 1, FHE.asEuint128(0));
 
         vm.prank(userA);
         hook.requestWithdrawToken1(encAmount);
