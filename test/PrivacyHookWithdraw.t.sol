@@ -168,6 +168,9 @@ contract PrivacyHookWithdrawTest is Test {
         vm.prank(userA);
         euint128 burnHandle = hook.requestWithdrawToken0(encAmount);
 
+        // Wait for decryption
+        vm.warp(block.timestamp + 11);
+
         vm.expectEmit(true, false, false, false);
         emit PrivacyHook.Withdrawn(userA, 0, 100);
 
@@ -199,6 +202,9 @@ contract PrivacyHookWithdrawTest is Test {
         vm.prank(userA);
         euint128 burnHandle = hook.requestWithdrawToken0(encAmount);
 
+        // Wait for decryption
+        vm.warp(block.timestamp + 11);
+
         vm.expectEmit(true, false, false, false);
         emit PrivacyHook.Withdrawn(userA, 0, 100);
 
@@ -214,6 +220,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount1 = cft.createInEuint128(100, 0, userA);
         vm.prank(userA);
         euint128 burnHandle1 = hook.requestWithdrawToken0(encAmount1);
+        vm.warp(block.timestamp + 11);
         vm.prank(userA);
         uint128 amount1 = hook.finalizeWithdrawToken0(burnHandle1);
         assertEq(amount1, 100);
@@ -221,6 +228,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount2 = cft.createInEuint128(50, 0, userA);
         vm.prank(userA);
         euint128 burnHandle2 = hook.requestWithdrawToken0(encAmount2);
+        vm.warp(block.timestamp + 11);
         vm.prank(userA);
         uint128 amount2 = hook.finalizeWithdrawToken0(burnHandle2);
         assertEq(amount2, 50);
@@ -238,6 +246,9 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount = cft.createInEuint128(100, 0, userA);
         vm.prank(userA);
         euint128 burnHandle = hook.requestWithdrawToken1(encAmount);
+
+        // Wait for decryption
+        vm.warp(block.timestamp + 11);
 
         vm.expectEmit(true, false, false, false);
         emit PrivacyHook.Withdrawn(userA, 1, 100);
@@ -270,6 +281,9 @@ contract PrivacyHookWithdrawTest is Test {
         vm.prank(userA);
         euint128 burnHandle = hook.requestWithdrawToken1(encAmount);
 
+        // Wait for decryption
+        vm.warp(block.timestamp + 11);
+
         vm.expectEmit(true, false, false, false);
         emit PrivacyHook.Withdrawn(userA, 1, 100);
 
@@ -285,6 +299,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount1 = cft.createInEuint128(100, 0, userA);
         vm.prank(userA);
         euint128 burnHandle1 = hook.requestWithdrawToken1(encAmount1);
+        vm.warp(block.timestamp + 11);
         vm.prank(userA);
         uint128 amount1 = hook.finalizeWithdrawToken1(burnHandle1);
         assertEq(amount1, 100);
@@ -292,6 +307,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount2 = cft.createInEuint128(50, 0, userA);
         vm.prank(userA);
         euint128 burnHandle2 = hook.requestWithdrawToken1(encAmount2);
+        vm.warp(block.timestamp + 11);
         vm.prank(userA);
         uint128 amount2 = hook.finalizeWithdrawToken1(burnHandle2);
         assertEq(amount2, 50);
@@ -311,6 +327,9 @@ contract PrivacyHookWithdrawTest is Test {
         vm.prank(userA);
         euint128 burnHandle = hook.requestWithdrawToken0(encAmount);
 
+        // Wait for decryption
+        vm.warp(block.timestamp + 11);
+
         // Finalize withdraw
         vm.prank(userA);
         uint128 amount = hook.finalizeWithdrawToken0(burnHandle);
@@ -328,6 +347,9 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount = cft.createInEuint128(200, 0, userA);
         vm.prank(userA);
         euint128 burnHandle = hook.requestWithdrawToken1(encAmount);
+
+        // Wait for decryption
+        vm.warp(block.timestamp + 11);
 
         vm.prank(userA);
         uint128 amount = hook.finalizeWithdrawToken1(burnHandle);
@@ -349,6 +371,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount0 = cft.createInEuint128(100, 0, userA);
         vm.prank(userA);
         euint128 burnHandle0 = hook.requestWithdrawToken0(encAmount0);
+        vm.warp(block.timestamp + 11);
         vm.prank(userA);
         uint128 amount0 = hook.finalizeWithdrawToken0(burnHandle0);
         assertEq(amount0, 100);
@@ -357,6 +380,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount1 = cft.createInEuint128(150, 0, userA);
         vm.prank(userA);
         euint128 burnHandle1 = hook.requestWithdrawToken1(encAmount1);
+        vm.warp(block.timestamp + 11);
         vm.prank(userA);
         uint128 amount1 = hook.finalizeWithdrawToken1(burnHandle1);
         assertEq(amount1, 150);
@@ -397,6 +421,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmount = cft.createInEuint128(50, 0, userA);
         vm.prank(userA);
         euint128 burnHandle = hook.requestWithdrawToken1(encAmount);
+        vm.warp(block.timestamp + 11);
         vm.prank(userA);
         uint128 amount = hook.finalizeWithdrawToken1(burnHandle);
         assertEq(amount, 50);
@@ -415,6 +440,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmountA = cft.createInEuint128(100, 0, userA);
         vm.prank(userA);
         euint128 burnHandleA = hook.requestWithdrawToken0(encAmountA);
+        vm.warp(block.timestamp + 11);
         vm.prank(userA);
         uint128 amountA = hook.finalizeWithdrawToken0(burnHandleA);
         assertEq(amountA, 100);
@@ -423,6 +449,7 @@ contract PrivacyHookWithdrawTest is Test {
         InEuint128 memory encAmountB = cft.createInEuint128(200, 0, userB);
         vm.prank(userB);
         euint128 burnHandleB = hook.requestWithdrawToken0(encAmountB);
+        vm.warp(block.timestamp + 11);
         vm.prank(userB);
         uint128 amountB = hook.finalizeWithdrawToken0(burnHandleB);
         assertEq(amountB, 200);
