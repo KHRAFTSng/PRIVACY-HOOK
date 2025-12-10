@@ -313,8 +313,11 @@ contract PrivacyHookIntegrationTest is Test {
         vm.stopPrank();
 
         // Verify final balances
-        cft.assertHashValue(token0.encBalances(userA), 150); // 300 - 100 - 50
-        cft.assertHashValue(token1.encBalances(userA), 150); // 0 + 100 - 50
+        // UserA: started with 300 token0, 0 token1
+        // First settlement: traded 100 token0 for 100 token1 → 200 token0, 100 token1
+        // Second settlement: traded 50 token1 for 50 token0 → 250 token0, 50 token1
+        cft.assertHashValue(token0.encBalances(userA), 250); // 300 - 100 + 50
+        cft.assertHashValue(token1.encBalances(userA), 50); // 0 + 100 - 50
         cft.assertHashValue(token0.encBalances(userC), 150); // 200 - 50
         cft.assertHashValue(token1.encBalances(userC), 250); // 200 + 50
     }
