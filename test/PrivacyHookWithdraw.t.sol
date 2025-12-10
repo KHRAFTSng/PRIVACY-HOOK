@@ -6,7 +6,7 @@ import {PrivacyHook} from "../src/PrivacyHook.sol";
 import {HybridFHERC20} from "../src/HybridFHERC20.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {CoFheTest} from "@fhenixprotocol/cofhe-foundry-mocks/CoFheTest.sol";
-import {FHE, InEuint128, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+import {FHE, InEuint128, InEbool, euint128} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 /**
  * @title PrivacyHookWithdrawTest
